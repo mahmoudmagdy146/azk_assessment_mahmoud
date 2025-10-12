@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_pos_config_salesperson" model="ir.ui.view">
+        <field name="name">pos.config.form.salesperson</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.pos_config_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//setting[field[@name='module_pos_hr']]" position="after">
+                <setting
+                    string="Configure Salesperson in Orderlines"
+                    help="Assign Salesperson in POS Orderlines">
+                    <field name="active_salesperson_feature"/>
+                    <div class="content-group mt16" invisible="not active_salesperson_feature">
+                        <label for="allowed_sale_person_ids" string="Allowed Salespersons"/>
+                        <field name="allowed_sale_person_ids" required="active_salesperson_feature" widget="many2many_tags"/>
+                    </div>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

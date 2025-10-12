@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!--        Pos receipt print out template-->
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">
+            res.config.settings.view.form.inherit.pos.receipt.extend
+        </field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id"
+               ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='pos_payment_section']" position="inside">
+                <div class="col-12 col-lg-6 o_setting_box" >
+                    <div class="o_setting_left_pane">
+                        <field name="use_customized_receipt"/>
+                    </div>
+                    <div class="o_setting_right_pane">
+                        <label for="use_customized_receipt"/>
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane"
+                                 invisible="use_customized_receipt == False">
+                                <field name="show_customer_details"/>
+                            </div>
+                            <div class="o_setting_right_pane"
+                                 invisible="use_customized_receipt == False">
+                                <label for="show_customer_details"/>
+                            </div>
+                        </div>
+                        <div invisible="use_customized_receipt == False">
+                            <label for="receipt_logo" class="col-lg-2 o_light_label"/>
+                            <field name="receipt_logo_filename" invisible="1"/>
+                            <field name="receipt_logo" filename="receipt_logo_filename"
+                                   options="{'accepted_file_extensions': 'image/*'}"/>
+                        </div>
+                        <div invisible="use_customized_receipt == False">
+                            <label for="company_name"/>
+                            <field name="company_name"/>
+                        </div>
+                        <div invisible="use_customized_receipt == False">
+                            <label for="company_details"/>
+                            <field name="company_details"/>
+                        </div>
+
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

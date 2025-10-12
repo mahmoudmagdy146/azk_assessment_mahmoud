@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Action -->
+    <record id="action_pos_sale_person" model="ir.actions.act_window">
+        <field name="name">POS Salespersons</field>
+        <field name="res_model">pos.sale.person</field>
+        <field name="view_mode">list,form,kanban</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first POS Salesperson
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_pos_sale_person_root"
+              name="POS Salespersons"
+              parent="point_of_sale.menu_point_of_sale"
+              action="action_pos_sale_person"
+              sequence="50"/>
+
+    <!-- list View -->
+    <record id="view_pos_sale_person_list" model="ir.ui.view">
+        <field name="name">pos.sale.person.list</field>
+        <field name="model">pos.sale.person</field>
+        <field name="arch" type="xml">
+            <list string="POS Salespersons">
+                <field name="image_128" widget="image" class="oe_avatar" optional="hide"/>
+                <field name="name"/>
+                <field name="phone_number"/>
+                <field name="related_employee_id"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_pos_sale_person_form" model="ir.ui.view">
+        <field name="name">pos.sale.person.form</field>
+        <field name="model">pos.sale.person</field>
+        <field name="arch" type="xml">
+            <form string="POS Salesperson">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Salesperson Name..."/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="phone_number"/>
+                            <field name="related_employee_id"/>
+                        </group>
+                        <group>
+                            <field name="image_128" widget="image" class="oe_avatar"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Kanban View -->
+    <record id="view_pos_sale_person_kanban" model="ir.ui.view">
+        <field name="name">pos.sale.person.kanban</field>
+        <field name="model">pos.sale.person</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_small_column" default_group_by="related_employee_id">
+                <field name="name"/>
+                <field name="phone_number"/>
+                <field name="image_128"/>
+                <field name="related_employee_id"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_global_click o_kanban_card">
+                            <div class="o_kanban_image">
+                                <img t-att-src="kanban_image('pos.sale.person', 'image_128', record.id.value)"
+                                     t-att-alt="record.name.value or 'Salesperson'"
+                                     class="oe_kanban_avatar"/>
+                            </div>
+                            <div class="o_kanban_details">
+                                <strong><field name="name"/></strong>
+                                <div><span><field name="phone_number"/></span></div>
+                                <div><small><field name="related_employee_id"/></small></div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_pos_sale_person_search" model="ir.ui.view">
+        <field name="name">pos.sale.person.search</field>
+        <field name="model">pos.sale.person</field>
+        <field name="arch" type="xml">
+            <search string="Search Salespersons">
+                <field name="name"/>
+                <field name="phone_number"/>
+                <field name="related_employee_id"/>
+                <filter string="Has Related Employee" name="has_employee" domain="[('related_employee_id', '!=', False)]"/>
+            </search>
+        </field>
+    </record>
+</odoo>

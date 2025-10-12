@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
+        <xpath expr="//OrderlineNoteButton" position="after">
+            <t t-if="pos.config.active_salesperson_feature">
+                <button class="btn btn-light btn-lg flex-shrink-0 d-flex align-items-center gap-2"
+                        t-on-click="() => pos.showSalespersonPopup()"
+                        t-att-disabled="!pos.get_order()?.get_orderlines()?.length">
+                    <i class="fa fa-user"></i>
+                    <span>Set Salesperson</span>
+                </button>
+            </t>
+        </xpath>
+    </t>
+    <t t-name="azk_pos_salesperson.ControlButtons" t-inherit="point_of_sale.ControlButtons"
+       t-inherit-mode="extension">
+        <xpath expr="//t[@t-if='props.showRemainingButtons']/div/OrderlineNoteButton" position="after">
+            <t t-if="pos.config.active_salesperson_feature">
+                <button class="btn btn-secondary btn-lg py-5"
+                        t-att-class="buttonClass"
+                        t-on-click="() => pos.showSalespersonPopup()"
+                        t-att-disabled="!pos.get_order() || !pos.get_order().get_selected_orderline()">
+    <!--                <i class="fa fa-user"></i>-->
+                    <i class="fa fa-user me-1" role="img" aria-label="Set Sales Person" title="Set Sales Person"/>
+                    <span>Salesperson</span>
+                </button>
+            </t>
+        </xpath>
+    </t>
+
+</templates>
+
+

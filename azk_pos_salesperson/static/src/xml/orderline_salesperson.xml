@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+  <t t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
+    <xpath expr="//li[contains(@class, 'price-per-unit')]" position="after">
+      <t t-if="line.salesperson_name">
+<!--      <t t-if="env.services.pos.config.active_salesperson_feature">-->
+        <div class="salesperson-label">
+          <t t-if="line.salesperson_image">
+            <img t-att-src="'data:image/png;base64,' + line.salesperson_image" class="salesperson-img"/>
+          </t>
+            <span>
+            <t t-esc="line.salesperson_name"/>
+          </span>
+            <span class="remove-icon text-danger" style="cursor: pointer;" t-on-click="removeSalesperson">✕</span>
+        </div>
+      </t>
+      <t t-if="!line.salesperson_name and env.services.pos.config.active_salesperson_feature">
+          <li style="text-align: right;">
+              <i t-attf-class="fa fa-user-plus sale_person" style="color:orange"
+                 t-on-click="showSalespersonPopup"/>
+          </li>
+      </t>
+    </xpath>
+  </t>
+</templates>
+
+
+
+
+
+
