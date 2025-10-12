@@ -103,7 +103,7 @@ Or install/upgrade from CLI:
 ## 📸 Screenshots
 
 ### POS Configuration
-![POS Config — Salesperson](docs/screenshots/config_salesperson.png)
+![POS Config — Salesperson](docs/screenshots/POS Configuration.png)
 
 ### POS Popup Selection
 ![POS Popup — Select Salesperson](docs/screenshots/pos_popup.png)
