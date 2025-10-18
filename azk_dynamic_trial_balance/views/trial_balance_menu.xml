@@ -1,22 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-  <record id="menu_account_reports_dynamic_tb" model="ir.ui.menu">
-    <field name="name">Dynamic Trial Balance</field>
-    <field name="parent_id" ref="account.menu_finance_reports"/>
-    <field name="sequence" eval="10"/>
-  </record>
+    <!-- Main Menu Item - Opens Wizard -->
+    <menuitem id="menu_dynamic_trial_balance"
+              name="Dynamic Trial Balance"
+              parent="account.menu_finance_reports"
+              action="action_trial_balance_wizard"
+              sequence="10"/>
 
-  <record id="action_trial_balance_wizard" model="ir.actions.act_window">
-    <field name="name">Dynamic Trial Balance</field>
-    <field name="res_model">trial.balance.wizard</field>
-    <field name="view_mode">form</field>
-    <field name="target">new</field>
-  </record>
-
-  <record id="menu_action_trial_balance" model="ir.actions.act_window">
-    <field name="name">View Trial Balance</field>
-    <field name="res_model">trial.balance.line</field>
-    <field name="view_mode">list,form</field>
-  </record>
-
-  <menuitem id="menu_trial_balance_root" name="Trial Balance" parent="menu_account_reports_dynamic_tb" sequence="20" action="action_trial_balance_wizard"/>
+    <!-- Alternative: Direct access to report (optional) -->
+    <record id="action_dynamic_trial_balance_report_direct" model="ir.actions.client">
+        <field name="name">Dynamic Trial Balance (Direct)</field>
+        <field name="tag">account_report</field>
+        <field name="context" eval="{'model': 'account.report',
+                                      'report_id': ref('dynamic_trial_balance_report')}"/>
+    </record>
 </odoo>

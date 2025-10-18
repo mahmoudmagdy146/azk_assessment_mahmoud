@@ -1,106 +1,233 @@
-from odoo import api, fields, models, _
+# -*- coding: utf-8 -*-
+from odoo import models, fields, api, _
 from odoo.exceptions import UserError
-import io
-import base64
+
 
 class TrialBalanceWizard(models.TransientModel):
     _name = 'trial.balance.wizard'
     _description = 'Dynamic Trial Balance Wizard'
 
-    date_from = fields.Date(string='Date From', required=True)
-    date_to = fields.Date(string='Date To', required=True)
-    company_id = fields.Many2one('res.company', string='Company', required=True, default=lambda self: self.env.company)
-    account_ids = fields.Many2many('account.account', string='Accounts (optional)')
-    include_unposted = fields.Boolean(string='Include Unposted Entries', default=False)
-    skip_zero_balance = fields.Boolean(string='Skip Zero Balance', default=False)
-    generated_count = fields.Integer(string='Generated Lines', readonly=True)
-    xlsx_file = fields.Binary('XLSX Report', readonly=True)
-    xlsx_filename = fields.Char('XLSX Filename', readonly=True)
+    # Date Range
+    date_from = fields.Date(
+        string='Date From',
+        required=True,
+        default=lambda self: fields.Date.context_today(self)
+    )
+    date_to = fields.Date(
+        string='Date To',
+        required=True,
+        default=lambda self: fields.Date.context_today(self)
+    )
 
-    def _get_domain(self):
-        domain = [
-            ('date', '>=', self.date_from),
-            ('date', '<=', self.date_to),
-            ('company_id', '=', self.company_id.id)
-        ]
-        if not self.include_unposted:
-            domain.append(('move_id.state', '=', 'posted'))
-        if self.account_ids:
-            domain.append(('account_id', 'in', self.account_ids.ids))
-        return domain
+    # Company
+    company_id = fields.Many2one(
+        'res.company',
+        string='Company',
+        required=True,
+        default=lambda self: self.env.company
+    )
 
-    def action_generate(self):
-        self.ensure_one()
-        TBLine = self.env['trial.balance.line']
-        # Clear previous lines for this wizard date/company
-        TBLine.clear_old([('date_from', '=', self.date_from), ('date_to', '=', self.date_to), ('company_id', '=', self.company_id.id)])
-        # Aggregate using read_group
-        domain = self._get_domain()
-        groupby = ['account_id', 'currency_id', 'company_id']
-        grouped = self.env['account.move.line'].read_group(domain, ['debit','credit','account_id','currency_id','company_id'], groupby)
-        results = []
-        for g in grouped:
-            acc_id = g.get('account_id')[0] if g.get('account_id') else False
-            cur_id = g.get('currency_id')[0] if g.get('currency_id') else False
-            comp_id = g.get('company_id')[0] if g.get('company_id') else self.company_id.id
-            debit = g.get('debit') or 0.0
-            credit = g.get('credit') or 0.0
-            balance = (debit - credit)
-            if self.skip_zero_balance and abs(balance) < 0.0001:
-                continue
-            vals = {
-                'account_id': acc_id,
-                'company_id': comp_id,
-                'debit': debit,
-                'credit': credit,
-                'balance': balance,
-                'currency_id': cur_id,
-                'date_from': self.date_from,
-                'date_to': self.date_to,
+    # Options Section
+    posted_entries_only = fields.Boolean(
+        string='Posted Entries Only',
+        default=True,
+        help='When checked, only posted entries are included. Uncheck to include draft entries.'
+    )
+
+    hierarchy_and_subtotals = fields.Boolean(
+        string='Hierarchy and Subtotals',
+        default=False,
+        help='Export report with Account Groups (same as Odoo behavior)'
+    )
+
+    hierarchy_only_parents = fields.Boolean(
+        string='Hierarchy Only Parents',
+        default=False,
+        help='Show only parent levels up to selected level'
+    )
+
+    account_level_up_to = fields.Selection(
+        [
+            ('1', 'Level 1'),
+            ('2', 'Level 2'),
+            ('3', 'Level 3'),
+            ('4', 'Level 4'),
+            ('5', 'Level 5'),
+        ],
+        string='Account Level Up To',
+        help='Select hierarchy level from 1 to 5'
+    )
+
+    # Filters Section
+    accounts_filter = fields.Char(
+        string='Accounts',
+        help='Specify the account prefix to view only matching accounts. '
+             'If no prefix is entered, all accounts will be displayed. '
+             'Examples: "100" or "100, 200, 400"'
+    )
+
+    journal_ids = fields.Many2many(
+        'account.journal',
+        string='Journals',
+        help='Select specific journals to include in the report, '
+             'or leave empty to include all journals.'
+    )
+
+    analytic_account_ids = fields.Many2many(
+        'account.analytic.account',
+        string='Analytic Accounts',
+        help='Select specific analytic accounts to include in the report, '
+             'or leave empty to include all.'
+    )
+
+    skip_zero_balance = fields.Boolean(
+        string='Skip Zero Balance',
+        default=True,
+        help='Select this option to hide accounts that have neither an initial '
+             'balance nor any transactions in this report.'
+    )
+
+    show_amount_currency = fields.Boolean(
+        string='Show Amount Currency',
+        default=False,
+        help='Enable this option to group the report by Account, followed by '
+             'Amount Currency. This will show the sum of the Amount Currency '
+             'for each account in its respective currency. Essentially, this '
+             'option provides a breakdown of account balances by the transaction '
+             'currency used.'
+    )
+
+    @api.onchange('hierarchy_and_subtotals')
+    def _onchange_hierarchy_and_subtotals(self):
+        """Reset child options when hierarchy is disabled"""
+        if not self.hierarchy_and_subtotals:
+            self.hierarchy_only_parents = False
+            self.account_level_up_to = False
+
+    @api.onchange('hierarchy_only_parents')
+    def _onchange_hierarchy_only_parents(self):
+        """Reset level when hierarchy only parents is disabled"""
+        if not self.hierarchy_only_parents:
+            self.account_level_up_to = False
+
+    @api.onchange('company_id')
+    def _onchange_company_id(self):
+        """Filter journals and analytic accounts by company"""
+        if self.company_id:
+            if self.journal_ids:
+                self.journal_ids = self.journal_ids.filtered(
+                    lambda j: j.company_id == self.company_id
+                )
+            if self.analytic_account_ids:
+                self.analytic_account_ids = self.analytic_account_ids.filtered(
+                    lambda a: not a.company_id or a.company_id == self.company_id
+                )
+
+        return {
+            'domain': {
+                'journal_ids': [('company_id', '=', self.company_id.id)],
+                'analytic_account_ids': [
+                    '|',
+                    ('company_id', '=', False),
+                    ('company_id', '=', self.company_id.id)
+                ],
             }
-            results.append(vals)
-        # create lines
-        created = []
-        for vals in results:
-            created.append(TBLine.create(vals))
-        self.generated_count = len(created)
-        # return action to view lines
-        action = self.env.ref('azk_dynamic_trial_balance.action_view_trial_balance_lines').read()[0]
+        }
+
+    def _prepare_report_options(self):
+        """
+        Convert wizard values to account.report options format.
+        This matches Odoo's enterprise report structure.
+        """
+        self.ensure_one()
+
+        # Base options structure
+        options = {
+            'date': {
+                'mode': 'range',
+                'date_from': fields.Date.to_string(self.date_from),
+                'date_to': fields.Date.to_string(self.date_to),
+                'filter': 'custom',
+            },
+            'all_entries': not self.posted_entries_only,
+            'company_id': self.company_id.id,
+            'companies': [{'id': self.company_id.id, 'name': self.company_id.name, 'selected': True}],
+            'multi_company': [{'id': self.company_id.id, 'name': self.company_id.name, 'selected': True}],
+        }
+
+        # Custom options for our report
+        options.update({
+            'include_unposted': not self.posted_entries_only,
+            'hierarchy_enabled': self.hierarchy_and_subtotals,
+            'hierarchy_only_parents': self.hierarchy_only_parents,
+            'hierarchy_level': int(self.account_level_up_to) if self.account_level_up_to else 0,
+            'skip_zero_balance': self.skip_zero_balance,
+            'show_currency': self.show_amount_currency,
+            'account_codes': self.accounts_filter or '',
+        })
+
+        # Journal filter
+        if self.journal_ids:
+            options['journals'] = [
+                {
+                    'id': journal.id,
+                    'name': journal.name,
+                    'code': journal.code,
+                    'type': journal.type,
+                    'selected': True,
+                }
+                for journal in self.journal_ids
+            ]
+
+        # Analytic filter
+        if self.analytic_account_ids:
+            options['analytic_accounts'] = [
+                {
+                    'id': analytic.id,
+                    'name': analytic.name,
+                    'selected': True,
+                }
+                for analytic in self.analytic_account_ids
+            ]
+
+        return options
+
+    def action_preview(self):
+        """
+        Open the enterprise-style report with configured options.
+        This mimics the native Odoo Trial Balance behavior.
+        """
+        self.ensure_one()
+
+        # Get the report
+        report = self.env.ref('azk_dynamic_trial_balance.dynamic_trial_balance_report')
+
+        if not report:
+            raise UserError(_('Dynamic Trial Balance report not found. Please check module installation.'))
+
+        # Prepare options
+        options = self._prepare_report_options()
+
+        # Store options in context for the report action
+        action = report.open_report(options)
+
+        # Update action to include our custom options
+        action['context'] = dict(action.get('context', {}), **{
+            'dynamic_trial_balance_options': options,
+        })
+
         return action
 
-    def action_xlsx(self):
+    def action_export_pdf(self):
+        """Export report to PDF with wizard options"""
         self.ensure_one()
-        TBLine = self.env['trial.balance.line']
-        lines = TBLine.search([('date_from', '=', self.date_from), ('date_to', '=', self.date_to), ('company_id', '=', self.company_id.id)], order='account_code asc')
-        # build simple xlsx in memory
-        try:
-            import xlsxwriter
-        except Exception:
-            raise UserError(_('xlsxwriter is not installed on the server.'))
-        output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
-        sheet = workbook.add_worksheet('Trial Balance')
-        headers = ['Account Code', 'Account Name', 'Debit', 'Credit', 'Balance', 'Currency']
-        for col, h in enumerate(headers):
-            sheet.write(0, col, h)
-        row = 1
-        for ln in lines:
-            sheet.write(row, 0, ln.account_code or '')
-            sheet.write(row, 1, ln.account_name or '')
-            sheet.write(row, 2, float(ln.debit or 0.0))
-            sheet.write(row, 3, float(ln.credit or 0.0))
-            sheet.write(row, 4, float(ln.balance or 0.0))
-            sheet.write(row, 5, ln.currency_id.name or '')
-            row += 1
-        workbook.close()
-        output.seek(0)
-        data = output.read()
-        self.xlsx_file = base64.b64encode(data)
-        self.xlsx_filename = 'trial_balance_{}_{}.xlsx'.format(self.date_from, self.date_to)
-        return {
-            'type': 'ir.actions.act_window',
-            'res_model': self._name,
-            'res_id': self.id,
-            'view_mode': 'form',
-            'target': 'new'
-        }
+        options = self._prepare_report_options()
+        report = self.env.ref('azk_dynamic_trial_balance.dynamic_trial_balance_report')
+        return report.export_to_pdf(options)
+
+    def action_export_xlsx(self):
+        """Export report to XLSX with wizard options"""
+        self.ensure_one()
+        options = self._prepare_report_options()
+        report = self.env.ref('azk_dynamic_trial_balance.dynamic_trial_balance_report')
+        return report.export_to_xlsx(options)

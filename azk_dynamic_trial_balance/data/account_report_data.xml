@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="dynamic_trial_balance_report" model="account.report">
+        <field name="name">Dynamic Trial Balance</field>
+        <field name="filter_multi_company">True</field>
+        <field name="filter_date_range">True</field>
+        <field name="filter_all_entries">True</field>
+        <field name="filter_journals">True</field>
+        <field name="filter_analytic" eval="True"/>
+        <field name="custom_handler_model_id" ref="model_account_dynamic_trial_balance_report_handler"/>
+        <field name="custom_handler_model_name">account.dynamic.trial.balance.report.handler</field>
+        <field name="availability_condition">True</field>
+        <field name="root_report_id" ref="account_reports.trial_balance_report"/>
+        <field name="column_ids">
+            <!-- Initial Balance -->
+            <record id="column_initial_debit" model="account.report.column">
+                <field name="name">Initial Debit</field>
+                <field name="sequence">1</field>
+                <field name="expression_label">initial_debit</field>
+                <field name="figure_type">monetary</field>
+            </record>
+            <record id="column_initial_credit" model="account.report.column">
+                <field name="name">Initial Credit</field>
+                <field name="sequence">2</field>
+                <field name="expression_label">initial_credit</field>
+                <field name="figure_type">monetary</field>
+            </record>
+            <record id="column_initial_balance" model="account.report.column">
+                <field name="name">Initial Balance</field>
+                <field name="sequence">3</field>
+                <field name="expression_label">initial_balance</field>
+                <field name="figure_type">monetary</field>
+            </record>
+            <!-- Period Movement -->
+            <record id="column_period_debit" model="account.report.column">
+                <field name="name">Movement Debit</field>
+                <field name="sequence">4</field>
+                <field name="expression_label">period_debit</field>
+                <field name="figure_type">monetary</field>
+            </record>
+            <record id="column_period_credit" model="account.report.column">
+                <field name="name">Movement Credit</field>
+                <field name="sequence">5</field>
+                <field name="expression_label">period_credit</field>
+                <field name="figure_type">monetary</field>
+            </record>
+            <record id="column_period_balance" model="account.report.column">
+                <field name="name">Movement Balance</field>
+                <field name="sequence">6</field>
+                <field name="expression_label">period_balance</field>
+                <field name="figure_type">monetary</field>
+            </record>
+            <!-- Ending Balance -->
+            <record id="column_ending_balance" model="account.report.column">
+                <field name="name">Ending Balance</field>
+                <field name="sequence">7</field>
+                <field name="expression_label">ending_balance</field>
+                <field name="figure_type">monetary</field>
+            </record>
+        </field>
+    </record>
+</odoo>

@@ -1,38 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-  <record id="view_trial_balance_wizard_form" model="ir.ui.view">
-    <field name="name">trial.balance.wizard.form</field>
-    <field name="model">trial.balance.wizard</field>
-    <field name="arch" type="xml">
-      <form string="Generate Trial Balance">
-        <group>
-          <field name="company_id"/>
-          <field name="date_from"/>
-          <field name="date_to"/>
-          <field name="include_unposted"/>
-          <field name="skip_zero_balance"/>
-          <field name="account_ids" widget="many2many_tags"/>
-        </group>
-        <footer>
-          <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
-          <button name="action_xlsx" type="object" string="Export XLSX"/>
-          <button string="Cancel" class="btn-secondary" special="cancel"/>
-        </footer>
-      </form>
-    </field>
-  </record>
+    <record id="view_trial_balance_wizard_form" model="ir.ui.view">
+        <field name="name">trial.balance.wizard.form</field>
+        <field name="model">trial.balance.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Dynamic Trial Balance">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="company_id" invisible="1"/>
+                            Dynamic Trial Balance Configuration
+                        </h1>
+                    </div>
 
-  <record id="view_trial_balance_tree" model="ir.ui.view">
-    <field name="name">trial.balance.line.list</field>
-    <field name="model">trial.balance.line</field>
-    <field name="arch" type="xml">
-      <list string="">
-        <field name="account_code"/>
-        <field name="account_name"/>
-        <field name="debit"/>
-        <field name="credit"/>
-        <field name="balance"/>
-        <field name="company_id"/>
-      </list>
-    </field>
-  </record>
+                    <group string="Date Range">
+                        <group>
+                            <field name="date_from" widget="date"/>
+                        </group>
+                        <group>
+                            <field name="date_to" widget="date"/>
+                        </group>
+                    </group>
+
+                    <group string="Options">
+                        <group>
+                            <field name="posted_entries_only" widget="boolean_toggle"/>
+                            <label for="hierarchy_and_subtotals" string="Hierarchy and Subtotals"/>
+                            <div>
+                                <field name="hierarchy_and_subtotals" widget="boolean_toggle"/>
+                                <div class="text-muted">
+                                    Export report with Account Groups (same as Odoo behavior)
+                                </div>
+                            </div>
+                            <field name="hierarchy_only_parents"
+                                   invisible="not hierarchy_and_subtotals"
+                                   widget="boolean_toggle"/>
+                            <field name="account_level_up_to"
+                                   invisible="not hierarchy_only_parents"
+                                   required="hierarchy_only_parents"/>
+                        </group>
+                        <group>
+                            <field name="skip_zero_balance" widget="boolean_toggle"/>
+                            <label for="show_amount_currency" string="Show Amount Currency"/>
+                            <div>
+                                <field name="show_amount_currency" widget="boolean_toggle"/>
+                                <div class="text-muted">
+                                    Group by Account and Currency with amount breakdown
+                                </div>
+                            </div>
+                        </group>
+                    </group>
+                    <group string="Filters">
+                        <group>
+                            <label for="accounts_filter"/>
+                            <div>
+                                <field name="accounts_filter" placeholder="e.g., 100, 200, 400"/>
+                                <div class="text-muted">
+                                    Specify account prefix(es). Leave empty for all accounts.
+                                </div>
+                            </div>
+                            <label for="journal_ids"/>
+                            <div>
+                                <field name="journal_ids"
+                                       widget="many2many_tags"
+                                       options="{'no_create': True}"/>
+                                <div class="text-muted">
+                                    Select specific journals or leave empty for all.
+                                </div>
+                            </div>
+                        </group>
+                        <group>
+                            <label for="analytic_account_ids"/>
+                            <div>
+                                <field name="analytic_account_ids"
+                                       widget="many2many_tags"
+                                       options="{'no_create': True}"
+                                       groups="analytic.group_analytic_accounting"/>
+                                <div class="text-muted">
+                                    Select specific analytic accounts or leave empty for all.
+                                </div>
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+
+                <footer>
+                    <button name="action_preview"
+                            type="object"
+                            string="Preview"
+                            class="btn-primary"
+                            data-hotkey="v"/>
+                    <button name="action_export_pdf"
+                            type="object"
+                            string="PDF"
+                            data-hotkey="p"/>
+                    <button name="action_export_xlsx"
+                            type="object"
+                            string="XLSX"
+                            data-hotkey="x"/>
+                    <button string="Cancel"
+                            class="btn-secondary"
+                            special="cancel"
+                            data-hotkey="z"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_trial_balance_wizard" model="ir.actions.act_window">
+        <field name="name">Dynamic Trial Balance</field>
+        <field name="res_model">trial.balance.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_trial_balance_wizard_form"/>
+    </record>
 </odoo>
