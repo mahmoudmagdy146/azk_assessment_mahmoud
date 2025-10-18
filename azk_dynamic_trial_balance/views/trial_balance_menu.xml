@@ -1,0 +1,22 @@
+<odoo>
+  <record id="menu_account_reports_dynamic_tb" model="ir.ui.menu">
+    <field name="name">Dynamic Trial Balance</field>
+    <field name="parent_id" ref="account.menu_finance_reports"/>
+    <field name="sequence" eval="10"/>
+  </record>
+
+  <record id="action_trial_balance_wizard" model="ir.actions.act_window">
+    <field name="name">Dynamic Trial Balance</field>
+    <field name="res_model">trial.balance.wizard</field>
+    <field name="view_mode">form</field>
+    <field name="target">new</field>
+  </record>
+
+  <record id="menu_action_trial_balance" model="ir.actions.act_window">
+    <field name="name">View Trial Balance</field>
+    <field name="res_model">trial.balance.line</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+  <menuitem id="menu_trial_balance_root" name="Trial Balance" parent="menu_account_reports_dynamic_tb" sequence="20" action="action_trial_balance_wizard"/>
+</odoo>

@@ -1,0 +1,38 @@
+<odoo>
+  <record id="view_trial_balance_wizard_form" model="ir.ui.view">
+    <field name="name">trial.balance.wizard.form</field>
+    <field name="model">trial.balance.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Generate Trial Balance">
+        <group>
+          <field name="company_id"/>
+          <field name="date_from"/>
+          <field name="date_to"/>
+          <field name="include_unposted"/>
+          <field name="skip_zero_balance"/>
+          <field name="account_ids" widget="many2many_tags"/>
+        </group>
+        <footer>
+          <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+          <button name="action_xlsx" type="object" string="Export XLSX"/>
+          <button string="Cancel" class="btn-secondary" special="cancel"/>
+        </footer>
+      </form>
+    </field>
+  </record>
+
+  <record id="view_trial_balance_tree" model="ir.ui.view">
+    <field name="name">trial.balance.line.list</field>
+    <field name="model">trial.balance.line</field>
+    <field name="arch" type="xml">
+      <list string="">
+        <field name="account_code"/>
+        <field name="account_name"/>
+        <field name="debit"/>
+        <field name="credit"/>
+        <field name="balance"/>
+        <field name="company_id"/>
+      </list>
+    </field>
+  </record>
+</odoo>
