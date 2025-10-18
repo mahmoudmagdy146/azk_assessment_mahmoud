@@ -103,16 +103,19 @@ Or install/upgrade from CLI:
 ## 📸 Screenshots
 
 ### POS Configuration
-![POS Config — Salesperson](docs/screenshots/config_salesperson.png)
+![POS Config — Salesperson](docs/screenshots/POS_Configuration.png)
 
 ### POS Popup Selection
-![POS Popup — Select Salesperson](docs/screenshots/pos_popup.png)
+![POS Popup — Select Salesperson](docs/screenshots/POS_Salesperson_Popup_Selection.png)
 
 ### Custom Receipt
-![POS Receipt — Custom Layout](docs/screenshots/receipt_custom.png)
+![POS Receipt — Custom Layout](docs/screenshots/Custom_Receipt.png)
 
 ### Backend Order
-![POS Backend — Order with Salesperson](docs/screenshots/order_backend.png)
+![POS Backend — Order with Salesperson](docs/screenshots/Backend_Order_With_Sales_Person.png)
+
+### Salesperson Global Button and Line icon
+![POS Salesperson — How to Select Salesperson](docs/screenshots/Salesperson_Global_Button_and_Line_icon.png)
 
 ---
 
