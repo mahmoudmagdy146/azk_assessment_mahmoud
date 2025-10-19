@@ -2,14 +2,13 @@
 <odoo>
     <record id="dynamic_trial_balance_report" model="account.report">
         <field name="name">Dynamic Trial Balance</field>
-        <field name="filter_multi_company">True</field>
+        <field name="filter_multi_company">selector</field>
         <field name="filter_date_range">True</field>
-        <field name="filter_all_entries">True</field>
         <field name="filter_journals">True</field>
         <field name="filter_analytic" eval="True"/>
         <field name="custom_handler_model_id" ref="model_account_dynamic_trial_balance_report_handler"/>
         <field name="custom_handler_model_name">account.dynamic.trial.balance.report.handler</field>
-        <field name="availability_condition">True</field>
+        <field name="availability_condition">always</field>
         <field name="root_report_id" ref="account_reports.trial_balance_report"/>
         <!-- Update column_ids to include all 9 columns -->
         <field name="column_ids">

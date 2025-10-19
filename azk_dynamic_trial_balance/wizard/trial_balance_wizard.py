@@ -227,8 +227,9 @@ class TrialBalanceWizard(models.TransientModel):
         options = self._prepare_report_options()
 
         # Generate lines using the handler
-        handler = report.custom_handler_model_id._get_model(self.env)
-        lines = handler._dynamic_lines(report, options, {})
+        handler = report.custom_handler_model_id.model
+
+        lines = self.env[handler]._dynamic_lines(report, options, {})
 
         # Prepare PDF data
         data = {
