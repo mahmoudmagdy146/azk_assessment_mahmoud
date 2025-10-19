@@ -57,9 +57,14 @@ Technical:
     "data": [
         "security/ir.model.access.csv",
         "data/account_report_data.xml",
+        'report/trial_balance_pdf_template.xml',
         "views/trial_balance_wizard_view.xml",
         "views/trial_balance_menu.xml",
     ],
+    'demo': [
+        'demo/demo_data.xml',
+    ],
+
     "installable": True,
     "application": False,
     "auto_install": False,

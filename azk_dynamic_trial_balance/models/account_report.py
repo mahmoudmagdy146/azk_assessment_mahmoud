@@ -252,6 +252,8 @@ class DynamicTrialBalanceCustomHandler(models.AbstractModel):
                 , COALESCE(pb.period_debit, 0) as period_debit
                 , COALESCE(pb.period_credit, 0) as period_credit
                 , COALESCE(pb.period_balance, 0) as period_balance
+                , COALESCE(ib.initial_debit, 0) + COALESCE(pb.period_debit, 0) as ending_debit
+                , COALESCE(ib.initial_credit, 0) + COALESCE(pb.period_credit, 0) as ending_credit
                 , COALESCE(ib.initial_balance, 0) + COALESCE(pb.period_balance, 0) as ending_balance
                 {", COALESCE(ib.initial_amount_currency, 0) as initial_amount_currency" if show_currency else ""}
                 {", COALESCE(pb.period_amount_currency, 0) as period_amount_currency" if show_currency else ""}
@@ -278,27 +280,77 @@ class DynamicTrialBalanceCustomHandler(models.AbstractModel):
     def _process_results_to_lines(self, results, options, report):
         """Convert SQL results to report lines"""
         lines = []
+        show_currency = options.get('show_currency', False)
 
-        skip_zero = options.get('skip_zero_balance', True)
-        hierarchy_enabled = options.get('hierarchy_enabled', False)
-        hierarchy_level = options.get('hierarchy_level', 0)
-        hierarchy_only_parents = options.get('hierarchy_only_parents', False)
-
-        if hierarchy_enabled:
-            lines = self._build_hierarchy_lines(results, options, report, hierarchy_level, hierarchy_only_parents)
-        else:
+        if show_currency:
+            # Results already grouped by account + currency from SQL
+            # Just create one line per result
             for result in results:
-                # Skip zero balance if requested
-                if skip_zero and result['ending_balance'] == 0 and result['initial_balance'] == 0:
+                if self._should_skip_line(result, options):
                     continue
+                lines.append(self._build_account_line(result, options, report))
+        else:
+            # Group by account (aggregate all currencies)
+            account_data = defaultdict(lambda: {
+                'account_id': None,
+                'account_code': '',
+                'account_name': '',
+                'initial_debit': 0,
+                'initial_credit': 0,
+                'initial_balance': 0,
+                'period_debit': 0,
+                'period_credit': 0,
+                'period_balance': 0,
+                'ending_debit': 0,
+                'ending_credit': 0,
+                'ending_balance': 0,
+            })
 
-                line = self._build_account_line(result, options, report)
-                lines.append(line)
+            for result in results:
+                acc_id = result['account_id']
+                if not account_data[acc_id]['account_id']:
+                    account_data[acc_id].update({
+                        'account_id': result['account_id'],
+                        'account_code': result['account_code'],
+                        'account_name': result['account_name'],
+                        'group_id': result.get('group_id'),
+                        'group_name': result.get('group_name'),
+                        'group_code': result.get('group_code'),
+                    })
+
+                # Aggregate
+                for key in ['initial_debit', 'initial_credit', 'initial_balance',
+                            'period_debit', 'period_credit', 'period_balance',
+                            'ending_debit', 'ending_credit', 'ending_balance']:
+                    account_data[acc_id][key] += result[key]
+
+            # Build lines
+            if options.get('hierarchy_enabled'):
+                lines = self._build_hierarchy_lines(
+                    list(account_data.values()), options, report,
+                    options.get('hierarchy_level', 0),
+                    options.get('hierarchy_only_parents', False)
+                )
+            else:
+                for acc_data in sorted(account_data.values(), key=lambda x: x['account_code']):
+                    if self._should_skip_line(acc_data, options):
+                        continue
+                    lines.append(self._build_account_line(acc_data, options, report))
 
         return lines
 
+    def _should_skip_line(self, result, options):
+        """Check if line should be skipped based on skip_zero_balance"""
+        if not options.get('skip_zero_balance', True):
+            return False
+
+        return (result['initial_balance'] == 0 and
+                result['period_debit'] == 0 and
+                result['period_credit'] == 0 and
+                result['ending_balance'] == 0)
+
     def _build_account_line(self, result, options, report):
-        """Build a single account line"""
+        """Build a single account line with all 9 columns"""
 
         show_currency = options.get('show_currency', False)
         account_id = result['account_id']
@@ -309,30 +361,37 @@ class DynamicTrialBalanceCustomHandler(models.AbstractModel):
         if show_currency and currency_id:
             line_id += f"_cur_{currency_id}"
 
-        # Format columns
+        # All 9 columns
         columns = [
-            {'name': self._format_value(result['initial_debit'], report), 'no_format_name': result['initial_debit']},
-            {'name': self._format_value(result['initial_credit'], report), 'no_format_name': result['initial_credit']},
+            # Initial Balance
+            {'name': self._format_value(result['initial_debit'], report),
+             'no_format': result['initial_debit']},
+            {'name': self._format_value(result['initial_credit'], report),
+             'no_format': result['initial_credit']},
             {'name': self._format_value(result['initial_balance'], report),
-             'no_format_name': result['initial_balance']},
-            {'name': self._format_value(result['period_debit'], report), 'no_format_name': result['period_debit']},
-            {'name': self._format_value(result['period_credit'], report), 'no_format_name': result['period_credit']},
-            {'name': self._format_value(result['period_balance'], report), 'no_format_name': result['period_balance']},
-            {'name': self._format_value(result['ending_balance'], report), 'no_format_name': result['ending_balance']},
+             'no_format': result['initial_balance']},
+
+            # Period Movement
+            {'name': self._format_value(result['period_debit'], report),
+             'no_format': result['period_debit']},
+            {'name': self._format_value(result['period_credit'], report),
+             'no_format': result['period_credit']},
+            {'name': self._format_value(result['period_balance'], report),
+             'no_format': result['period_balance']},
+
+            # Ending Balance
+            {'name': self._format_value(result['ending_debit'], report),
+             'no_format': result['ending_debit']},
+            {'name': self._format_value(result['ending_credit'], report),
+             'no_format': result['ending_credit']},
+            {'name': self._format_value(result['ending_balance'], report),
+             'no_format': result['ending_balance']},
         ]
 
-        # Add currency columns if enabled
-        if show_currency:
-            columns.extend([
-                {'name': result.get('currency_name', ''), 'class': 'text'},
-                {'name': self._format_value(result.get('ending_amount_currency', 0), report),
-                 'no_format_name': result.get('ending_amount_currency', 0)},
-            ])
-
-        # Build line name with currency info
+        # Build line name
         line_name = f"{result['account_code']} {result['account_name']}"
         if show_currency and result.get('currency_name'):
-            line_name += f" ({result['currency_name']})"
+            line_name += f" [{result['currency_name']}]"
 
         return {
             'id': line_id,
@@ -340,93 +399,58 @@ class DynamicTrialBalanceCustomHandler(models.AbstractModel):
             'level': 2,
             'columns': columns,
             'unfoldable': False,
+            'unfolded': False,
             'caret_options': 'account.account',
-            'account_id': account_id,
         }
 
     def _build_hierarchy_lines(self, results, options, report, max_level, only_parents):
-        """Build hierarchical lines with account groups"""
+        """Build hierarchical lines with proper level filtering"""
         lines = []
-        groups = defaultdict(lambda: {
-            'accounts': [],
-            'initial_debit': 0,
-            'initial_credit': 0,
-            'initial_balance': 0,
-            'period_debit': 0,
-            'period_credit': 0,
-            'period_balance': 0,
-            'ending_balance': 0,
-            'initial_amount_currency': 0,
-            'period_amount_currency': 0,
-            'ending_amount_currency': 0,
-        })
 
-        skip_zero = options.get('skip_zero_balance', True)
+        if not only_parents or max_level == 0:
+            # Show all groups and accounts
+            return self._build_full_hierarchy(results, options, report)
 
-        # Group accounts
+        # Filter by level
+        filtered_groups = {}
+        AccountGroup = self.env['account.group']
+
         for result in results:
-            # Skip zero if requested
-            if skip_zero and result['ending_balance'] == 0 and result['initial_balance'] == 0:
+            group_id = result.get('group_id')
+            if not group_id:
                 continue
 
-            group_id = result.get('group_id')
-            if group_id:
-                groups[group_id]['accounts'].append(result)
-                groups[group_id]['group_name'] = result['group_name']
-                groups[group_id]['group_code'] = result['group_code']
-
-                # Aggregate
-                for key in ['initial_debit', 'initial_credit', 'initial_balance',
-                            'period_debit', 'period_credit', 'period_balance', 'ending_balance']:
-                    groups[group_id][key] += result[key]
-
-                if options.get('show_currency'):
-                    for key in ['initial_amount_currency', 'period_amount_currency', 'ending_amount_currency']:
-                        groups[group_id][key] += result.get(key, 0)
+            group = AccountGroup.browse(group_id)
+            # Calculate level: count '/' in parent_path or complete_code
+            if hasattr(group, 'parent_path'):
+                level = group.parent_path.count('/')
             else:
-                # No group - add directly
-                lines.append(self._build_account_line(result, options, report))
+                level = len(group.code_prefix_start.split()) if group.code_prefix_start else 1
 
-        # Build group lines
-        for group_id, group_data in sorted(groups.items(), key=lambda x: x[1].get('group_code', '')):
-            # Check hierarchy level
-            if only_parents and max_level:
-                # Get group level
-                group = self.env['account.group'].browse(group_id)
-                group_level = len(group.complete_code.split('/'))
-                if group_level > max_level:
-                    continue
+            # Only include if within level limit
+            if level <= max_level:
+                if group_id not in filtered_groups:
+                    filtered_groups[group_id] = {
+                        'group': group,
+                        'accounts': [],
+                        'totals': self._init_totals_dict()
+                    }
 
-            # Group header line
-            group_line = {
-                'id': f"group_{group_id}",
-                'name': f"{group_data['group_code']} {group_data['group_name']}",
-                'level': 1,
-                'class': 'o_account_reports_level1',
-                'columns': [
-                    {'name': self._format_value(group_data['initial_debit'], report)},
-                    {'name': self._format_value(group_data['initial_credit'], report)},
-                    {'name': self._format_value(group_data['initial_balance'], report)},
-                    {'name': self._format_value(group_data['period_debit'], report)},
-                    {'name': self._format_value(group_data['period_credit'], report)},
-                    {'name': self._format_value(group_data['period_balance'], report)},
-                    {'name': self._format_value(group_data['ending_balance'], report)},
-                ],
-                'unfoldable': True,
-                'unfolded': True,
-            }
+                filtered_groups[group_id]['accounts'].append(result)
+                self._accumulate_totals(filtered_groups[group_id]['totals'], result)
 
-            if options.get('show_currency'):
-                group_line['columns'].extend([
-                    {'name': ''},
-                    {'name': self._format_value(group_data['ending_amount_currency'], report)},
-                ])
+        # Build lines from filtered groups
+        for group_id in sorted(filtered_groups.keys(),
+                               key=lambda gid: filtered_groups[gid]['group'].code_prefix_start or ''):
+            group_data = filtered_groups[group_id]
 
-            lines.append(group_line)
+            # Group header
+            lines.append(self._build_group_header(group_data, options, report))
 
-            # Add account lines under group
-            for account in sorted(group_data['accounts'], key=lambda x: x['account_code']):
-                lines.append(self._build_account_line(account, options, report))
+            # Accounts under group
+            for account in sorted(group_data['accounts'], key=lambda a: a['account_code']):
+                if not self._should_skip_line(account, options):
+                    lines.append(self._build_account_line(account, options, report))
 
         return lines
 

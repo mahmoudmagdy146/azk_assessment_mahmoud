@@ -219,11 +219,30 @@ class TrialBalanceWizard(models.TransientModel):
         return action
 
     def action_export_pdf(self):
-        """Export report to PDF with wizard options"""
+        """Export report to PDF"""
         self.ensure_one()
-        options = self._prepare_report_options()
+
+        # Get report and prepare options
         report = self.env.ref('azk_dynamic_trial_balance.dynamic_trial_balance_report')
-        return report.export_to_pdf(options)
+        options = self._prepare_report_options()
+
+        # Generate lines using the handler
+        handler = report.custom_handler_model_id._get_model(self.env)
+        lines = handler._dynamic_lines(report, options, {})
+
+        # Prepare PDF data
+        data = {
+            'company': self.company_id,
+            'date_from': self.date_from,
+            'date_to': self.date_to,
+            'lines': lines,
+            'options': options,
+        }
+
+        # Render PDF
+        return self.env.ref('azk_dynamic_trial_balance.action_report_dynamic_trial_balance_pdf').report_action(
+            self, data=data
+        )
 
     def action_export_xlsx(self):
         """Export report to XLSX with wizard options"""

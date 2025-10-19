@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Account Groups -->
+    <record id="demo_group_assets" model="account.group">
+        <field name="name">Assets</field>
+        <field name="code_prefix_start">1</field>
+        <field name="code_prefix_end">1999</field>
+    </record>
+
+    <record id="demo_group_liabilities" model="account.group">
+        <field name="name">Liabilities</field>
+        <field name="code_prefix_start">2</field>
+        <field name="code_prefix_end">2999</field>
+    </record>
+
+    <!-- Sample Accounts -->
+    <record id="demo_account_cash" model="account.account">
+        <field name="name">Cash - Demo</field>
+        <field name="code">100100</field>
+        <field name="account_type">asset_current</field>
+        <field name="group_id" ref="demo_group_assets"/>
+    </record>
+
+    <record id="demo_account_bank" model="account.account">
+        <field name="name">Bank - Demo</field>
+        <field name="code">100200</field>
+        <field name="account_type">asset_current</field>
+        <field name="group_id" ref="demo_group_assets"/>
+    </record>
+
+    <!-- Analytic Accounts -->
+    <record id="demo_analytic_project_a" model="account.analytic.account">
+        <field name="name">Project A</field>
+        <field name="code">PROJ-A</field>
+        <field name="plan_id" ref="analytic.analytic_plan_projects"/>
+    </record>
+
+    <!-- Journal Entries - Posted -->
+    <record id="demo_move_posted_1" model="account.move">
+        <field name="move_type">entry</field>
+        <field name="date" eval="(datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')"/>
+        <field name="journal_id" ref="account.miscellaneous_journal"/>
+        <field name="state">posted</field>
+        <field name="line_ids">
+            <record id="demo_move_line_debit_1" model="account.move.line">
+                <field name="account_id" ref="demo_account_cash"/>
+                <field name="debit">1000</field>
+                <field name="credit">0</field>
+                <field name="analytic_distribution">{"%(demo_analytic_project_a)d": 100}</field>
+            </record>
+            <record id="demo_move_line_credit_1" model="account.move.line">
+                <field name="account_id" ref="demo_account_bank"/>
+                <field name="debit">0</field>
+                <field name="credit">1000</field>
+            </record>
+        </field>
+    </record>
+
+    <!-- Journal Entry - Draft (Unposted) -->
+    <record id="demo_move_draft_1" model="account.move">
+        <field name="move_type">entry</field>
+        <field name="date" eval="datetime.now().strftime('%Y-%m-%d')"/>
+        <field name="journal_id" ref="account.miscellaneous_journal"/>
+        <field name="state">draft</field>
+        <field name="line_ids">
+            <record id="demo_move_line_debit_2" model="account.move.line">
+                <field name="account_id" ref="demo_account_cash"/>
+                <field name="debit">500</field>
+                <field name="credit">0</field>
+            </record>
+            <record id="demo_move_line_credit_2" model="account.move.line">
+                <field name="account_id" ref="demo_account_bank"/>
+                <field name="debit">0</field>
+                <field name="credit">500</field>
+            </record>
+        </field>
+    </record>
+
+    <!-- Multi-currency Entry -->
+    <record id="demo_move_multicurrency" model="account.move">
+        <field name="move_type">entry</field>
+        <field name="date" eval="(datetime.now() - timedelta(days=15)).strftime('%Y-%m-%d')"/>
+        <field name="journal_id" ref="account.miscellaneous_journal"/>
+        <field name="state">posted</field>
+        <field name="line_ids">
+            <record id="demo_move_line_usd" model="account.move.line">
+                <field name="account_id" ref="demo_account_cash"/>
+                <field name="debit">1200</field>
+                <field name="credit">0</field>
+                <field name="currency_id" ref="base.USD"/>
+                <field name="amount_currency">1500</field>
+            </record>
+            <record id="demo_move_line_usd_offset" model="account.move.line">
+                <field name="account_id" ref="demo_account_bank"/>
+                <field name="debit">0</field>
+                <field name="credit">1200</field>
+                <field name="currency_id" ref="base.USD"/>
+                <field name="amount_currency">-1500</field>
+            </record>
+        </field>
+    </record>
+</odoo>
